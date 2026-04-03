@@ -1,0 +1,1 @@
+# RAG Assistant application package

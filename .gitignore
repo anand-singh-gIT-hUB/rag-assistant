@@ -1,0 +1,58 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Virtual environments
+venv/
+.venv/
+env/
+ENV/
+
+# Environment variables
+.env
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Storage (runtime data — not committed)
+app/storage/vectordb/
+app/storage/logs/
+app/storage/files/
+!app/storage/.gitkeep
+
+# Test/coverage
+.pytest_cache/
+.coverage
+htmlcov/
+coverage.xml
+
+# MyPy
+.mypy_cache/
+
+# Ruff
+.ruff_cache/
+
+# Docker
+*.dockerfile.bak
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Evaluation reports
+evaluation/reports/
+
+# Misc
+*.log
+*.tmp

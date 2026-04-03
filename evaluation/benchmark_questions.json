@@ -1,0 +1,12 @@
+[
+  {"question": "What is retrieval-augmented generation?", "answer": "", "contexts": []},
+  {"question": "How does ChromaDB store embeddings?", "answer": "", "contexts": []},
+  {"question": "What is the role of a reranker in a RAG pipeline?", "answer": "", "contexts": []},
+  {"question": "What embedding model is used by default?", "answer": "", "contexts": []},
+  {"question": "Explain the chunking strategy used in this system.", "answer": "", "contexts": []},
+  {"question": "What LLM providers are supported?", "answer": "", "contexts": []},
+  {"question": "How are citations generated?", "answer": "", "contexts": []},
+  {"question": "What file formats can be uploaded?", "answer": "", "contexts": []},
+  {"question": "How does the system prevent hallucination?", "answer": "", "contexts": []},
+  {"question": "What is the Ragas evaluation framework?", "answer": "", "contexts": []}
+]

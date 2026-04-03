@@ -1,0 +1,12 @@
+{
+  "What is retrieval-augmented generation?": "Retrieval-Augmented Generation (RAG) is a framework that combines a retrieval step with a generative language model to produce grounded, factual answers from a document corpus.",
+  "How does ChromaDB store embeddings?": "ChromaDB stores embeddings as dense vectors in an HNSW index on disk, persisting data to a local directory for efficient approximate nearest-neighbour search.",
+  "What is the role of a reranker in a RAG pipeline?": "A reranker is a cross-encoder model that rescores the initial retrieval candidates by jointly encoding the query and each passage, yielding a more precise relevance ranking.",
+  "What embedding model is used by default?": "The default embedding model is OpenAI text-embedding-3-small, producing 1536-dimensional vectors.",
+  "Explain the chunking strategy used in this system.": "Documents are split using a recursive character text splitter that respects a configurable token budget per chunk and maintains overlap to preserve context across boundaries.",
+  "What LLM providers are supported?": "The system supports OpenAI (gpt-4.1-mini by default) and Ollama for fully local inference.",
+  "How are citations generated?": "Citations are built from the metadata attached to each retrieved chunk, including the source file name, page number, and an excerpt of the passage used in the answer.",
+  "What file formats can be uploaded?": "The system supports PDF, DOCX, TXT, and Markdown (MD) files.",
+  "How does the system prevent hallucination?": "The system prompt explicitly instructs the LLM to answer only from the provided context passages and to state when it lacks sufficient information instead of fabricating facts.",
+  "What is the Ragas evaluation framework?": "Ragas is an open-source framework for evaluating RAG pipelines on metrics such as faithfulness, answer relevancy, context recall, and context precision."
+}
