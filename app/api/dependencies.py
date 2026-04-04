@@ -2,6 +2,8 @@
 app/api/dependencies.py
 ───────────────────────
 FastAPI dependency-injection helpers shared across routers.
+The QueryService is cached as a true singleton — no settings object
+is passed as a cache key to avoid any hashing or invalidation issues.
 """
 from functools import lru_cache
 
@@ -25,14 +27,19 @@ def get_document_service(
     return DocumentService(embedder=embedder, vector_store=store, settings=settings)
 
 
-def get_query_service(
-    settings: Settings = Depends(get_settings),
-) -> QueryService:
+@lru_cache(maxsize=1)
+def _build_query_service() -> QueryService:
+    """Build the canonical, long-lived QueryService singleton."""
+    settings = get_settings()
     embedder = get_embedder(settings)
     store = get_vector_store(settings)
     llm = get_llm(settings)
     pipeline = RetrievalPipeline(embedder=embedder, vector_store=store, settings=settings)
     return QueryService(retrieval_pipeline=pipeline, llm=llm, settings=settings)
+
+
+def get_query_service() -> QueryService:
+    return _build_query_service()
 
 
 def get_evaluation_service(

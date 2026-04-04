@@ -44,28 +44,54 @@ if question := st.chat_input("Ask a question about your documents…"):
         st.markdown(question)
 
     with st.chat_message("assistant"):
-        with st.spinner("Thinking…"):
-            try:
-                response = api_client.query(
-                    question=question,
-                    top_k=st.session_state.get("top_k", 10),
-                    rerank=st.session_state.get("reranker_enabled", True),
-                    doc_ids=st.session_state.get("selected_doc_ids") or None,
-                )
-                answer = response["answer"]
-                citations = response.get("citations", [])
+        try:
+            stream = api_client.stream_query(
+                question=question,
+                top_k=st.session_state.get("top_k"),
+                rerank=st.session_state.get("reranker_enabled"),
+                doc_ids=st.session_state.get("selected_doc_ids") or None,
+            )
+            
+            answer_placeholder = st.empty()
+            answer_placeholder.markdown("*(Retrieving documents...)*")
+            
+            full_answer = ""
+            citations = []
+            metrics = {}
+            
+            for chunk in stream:
+                if chunk["type"] == "metadata":
+                    citations = chunk.get("citations", [])
+                    metrics["model"] = chunk.get("model", "")
+                    metrics["retrieval_top_k"] = chunk.get("retrieval_top_k", 0)
+                    metrics["reranked"] = chunk.get("reranked", False)
+                    metrics["retrieval_time"] = chunk.get("retrieval_time", 0)
+                elif chunk["type"] == "token":
+                    full_answer += chunk["content"]
+                    answer_placeholder.markdown(full_answer + "▌")
+                elif chunk["type"] == "error":
+                    st.error(chunk["detail"])
+                    break
+                elif chunk["type"] == "done":
+                    metrics["gen_time"] = chunk.get("gen_time", 0)
+                    metrics["total_time"] = chunk.get("total_time", 0)
+                    break
 
-                st.markdown(answer)
-                st.session_state["messages"].append({"role": "assistant", "content": answer})
-                st.session_state["citations"] = citations
+            answer_placeholder.markdown(full_answer)
+            st.session_state["messages"].append({"role": "assistant", "content": full_answer})
+            st.session_state["citations"] = citations
 
-                render_citations(citations)
+            render_citations(citations)
 
-                with st.expander("ℹ️ Query info"):
-                    st.write(f"**Model:** {response['model']}")
-                    st.write(f"**Chunks used:** {response['retrieval_top_k']}")
-                    st.write(f"**Reranked:** {response['reranked']}")
-            except Exception as e:
-                err = f"Error: {e}"
-                st.error(err)
-                st.session_state["messages"].append({"role": "assistant", "content": err})
+            with st.expander("ℹ️ Query info"):
+                st.write(f"**Model:** {metrics.get('model', 'N/A')}")
+                st.write(f"**Retrieval top-k:** {metrics.get('retrieval_top_k', 0)}")
+                st.write(f"**Reranked:** {metrics.get('reranked', False)}")
+                st.write(f"**Retrieval Time:** {metrics.get('retrieval_time', 0):.2f}s")
+                st.write(f"**Generation Time:** {metrics.get('gen_time', 0):.2f}s")
+                st.write(f"**Total Time:** {metrics.get('total_time', 0):.2f}s")
+
+        except Exception as e:
+            err = f"Error: {e}"
+            st.error(err)
+            st.session_state["messages"].append({"role": "assistant", "content": err})

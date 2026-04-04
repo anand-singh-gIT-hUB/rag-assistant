@@ -19,6 +19,7 @@ class QueryRequest(BaseModel):
     top_k: Optional[int] = Field(default=None, ge=1, le=50)
     doc_ids: Optional[list[str]] = Field(default=None, description="Filter to specific documents")
     rerank: Optional[bool] = Field(default=None, description="Override reranker toggle")
+    stream: bool = Field(default=False, description="Whether to stream the response back")
 
 
 class QueryResponse(BaseModel):
@@ -32,7 +33,7 @@ class QueryResponse(BaseModel):
 
 class RetrieveRequest(BaseModel):
     question: str = Field(..., min_length=1, max_length=2000)
-    top_k: int = Field(default=10, ge=1, le=50)
+    top_k: Optional[int] = Field(default=None, ge=1, le=50)
     doc_ids: Optional[list[str]] = None
 
 

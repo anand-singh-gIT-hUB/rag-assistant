@@ -11,8 +11,8 @@ def init_session():
         "messages": [],          # Chat history: list of {"role": str, "content": str}
         "citations": [],          # Latest citations
         "selected_doc_ids": [],   # Filtered doc IDs
-        "reranker_enabled": True,
-        "top_k": 10,
+        "reranker_enabled": None,
+        "top_k": None,
         "api_online": False,
     }
     for key, val in defaults.items():

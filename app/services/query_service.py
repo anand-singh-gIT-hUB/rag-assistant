@@ -81,6 +81,72 @@ class QueryService:
             reranked=reranked,
         )
 
+    def answer_stream(self, request: QueryRequest):
+        import time
+        if len(request.question) > MAX_QUERY_LENGTH:
+            yield json.dumps({"type": "error", "detail": f"Max {MAX_QUERY_LENGTH} characters."}) + "\n"
+            return
+
+        t0 = time.perf_counter()
+        chunks, reranked = self._pipeline.run(
+            query=request.question,
+            top_k=request.top_k,
+            doc_ids=request.doc_ids,
+            rerank=request.rerank,
+        )
+        retrieval_time = time.perf_counter() - t0
+        logger.info("Retrieval complete", retrieve_s=round(retrieval_time, 2), n_chunks=len(chunks))
+
+        citations = build_citations(chunks)
+        yield json.dumps({
+            "type": "metadata",
+            "citations": [c.model_dump() if hasattr(c, 'model_dump') else c.dict() for c in citations] if citations else [],
+            "model": self._llm.model_name,
+            "retrieval_top_k": len(chunks),
+            "reranked": reranked,
+            "retrieval_time": round(retrieval_time, 2)
+        }) + "\n"
+
+        user_prompt = build_user_prompt(request.question, chunks)
+
+        t1 = time.perf_counter()
+        answer = ""
+        first_token_time = None
+        try:
+            for token in self._llm.stream_complete(SYSTEM_PROMPT, user_prompt):
+                if first_token_time is None:
+                    first_token_time = time.perf_counter()
+                    logger.info("First token received", ttft_s=round(first_token_time - t1, 2))
+                answer += token
+                yield json.dumps({"type": "token", "content": token}) + "\n"
+        except Exception as e:
+            yield json.dumps({"type": "error", "detail": str(e)}) + "\n"
+            return
+
+        gen_time = time.perf_counter() - t1
+        total_time = time.perf_counter() - t0
+        logger.info(
+            "Query complete",
+            retrieve_s=round(retrieval_time, 2),
+            first_token_s=round(first_token_time - t1, 2) if first_token_time else None,
+            gen_s=round(gen_time, 2),
+            total_s=round(total_time, 2),
+        )
+
+        self._log_query({
+            "ts": datetime.now(timezone.utc).isoformat(),
+            "question": request.question,
+            "model": self._llm.model_name,
+            "num_chunks": len(chunks),
+            "reranked": reranked,
+            "answer_len": len(answer),
+            "retrieval_s": round(retrieval_time, 2),
+            "gen_s": round(gen_time, 2),
+            "total_s": round(total_time, 2),
+        })
+
+        yield json.dumps({"type": "done", "gen_time": round(gen_time, 2), "total_time": round(total_time, 2)}) + "\n"
+
     def retrieve_only(self, request: RetrieveRequest) -> RetrieveResponse:
         chunks, _ = self._pipeline.run(
             query=request.question,

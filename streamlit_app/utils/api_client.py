@@ -61,6 +61,23 @@ def query(question: str, top_k: int | None = None, doc_ids: list[str] | None = N
     return _post("/query", json=payload)
 
 
+def stream_query(question: str, top_k: int | None = None, doc_ids: list[str] | None = None, rerank: bool | None = None):
+    import json
+    payload: dict = {"question": question, "stream": True}
+    if top_k is not None:
+        payload["top_k"] = top_k
+    if doc_ids:
+        payload["doc_ids"] = doc_ids
+    if rerank is not None:
+        payload["rerank"] = rerank
+        
+    with httpx.stream("POST", f"{BASE_URL}/query", json=payload, timeout=TIMEOUT) as r:
+        r.raise_for_status()
+        for line in r.iter_lines():
+            if line:
+                yield json.loads(line)
+
+
 def retrieve(question: str, top_k: int = 10) -> dict:
     return _post("/retrieve", json={"question": question, "top_k": top_k})
 

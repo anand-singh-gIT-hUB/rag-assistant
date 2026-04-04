@@ -14,6 +14,7 @@ from app.core.config import get_settings
 from app.core.exceptions import RAGBaseException
 from app.core.logging import get_logger, setup_logging
 from app.api.routes import health, documents, query, evaluation
+from app.api.dependencies import _build_query_service
 
 logger = get_logger(__name__)
 
@@ -28,6 +29,29 @@ async def lifespan(app: FastAPI):
     _ = settings.logs_path
     _ = settings.chroma_persist_path
     logger.info("RAG Assistant API starting", provider=settings.llm_provider)
+    # ── Force-load ALL heavy components at startup so first user query is instant ─
+    import asyncio
+    loop = asyncio.get_event_loop()
+    svc = _build_query_service()  # builds pipeline singleton (reranker only if enabled)
+
+    # 1. Warm embedder: loads SentenceTransformer weights into RAM
+    try:
+        embedder = svc._pipeline._retriever.embedder
+        await loop.run_in_executor(None, embedder.embed_query, "warmup")
+        logger.info("Embedder warmup complete")
+    except Exception as e:
+        logger.warning("Embedder warmup failed (non-fatal)", error=str(e))
+
+    # 2. Warm LLM: loads Ollama model into memory
+    try:
+        await loop.run_in_executor(
+            None, svc._llm.complete,
+            "You are a helpful assistant.", "Reply with: ready"
+        )
+        logger.info("LLM warmup complete")
+    except Exception as e:
+        logger.warning("LLM warmup failed (non-fatal)", error=str(e))
+
     yield
     logger.info("RAG Assistant API shutting down")
 
