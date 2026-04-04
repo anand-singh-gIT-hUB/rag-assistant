@@ -2,8 +2,12 @@
 app/schemas/evaluation.py
 """
 from datetime import datetime
-from typing import Optional
+from typing import Literal
 from pydantic import BaseModel
+
+
+class EvaluationRunRequest(BaseModel):
+    mode: Literal["fast", "full"] = "fast"
 
 
 class EvaluationRunResponse(BaseModel):
@@ -13,6 +17,7 @@ class EvaluationRunResponse(BaseModel):
     num_questions: int
     metrics: dict[str, float]
     status: str
+    mode: str
 
 
 class EvaluationResultsResponse(BaseModel):

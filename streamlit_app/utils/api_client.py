@@ -20,7 +20,11 @@ def _get(path: str, **params) -> dict:
 def _post(path: str, json: Any = None, files=None, data=None) -> dict:
     with httpx.Client(timeout=TIMEOUT) as client:
         r = client.post(f"{BASE_URL}{path}", json=json, files=files, data=data)
-        r.raise_for_status()
+        try:
+            r.raise_for_status()
+        except httpx.HTTPStatusError as e:
+            detail = r.text
+            raise RuntimeError(f"{e}\nBackend detail: {detail}") from e
         return r.json()
 
 
@@ -84,8 +88,8 @@ def retrieve(question: str, top_k: int = 10) -> dict:
 
 # ── Evaluation ────────────────────────────────────────────────────────────────
 
-def run_evaluation() -> dict:
-    return _post("/evaluate/run")
+def run_evaluation(mode: str) -> dict:
+    return _post("/evaluate/run", json={"mode": mode})
 
 
 def get_evaluation_results() -> dict:

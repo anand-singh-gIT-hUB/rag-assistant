@@ -42,7 +42,7 @@ def get_query_service() -> QueryService:
     return _build_query_service()
 
 
-def get_evaluation_service(
-    settings: Settings = Depends(get_settings),
-) -> EvaluationService:
-    return EvaluationService(settings=settings)
+def get_evaluation_service() -> EvaluationService:
+    settings = get_settings()
+    query_service = _build_query_service()
+    return EvaluationService(settings=settings, query_service=query_service)

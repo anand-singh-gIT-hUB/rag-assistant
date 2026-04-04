@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from app.api.dependencies import get_evaluation_service
 from app.core.exceptions import EvaluationError
-from app.schemas.evaluation import EvaluationRunResponse, EvaluationResultsResponse
+from app.schemas.evaluation import EvaluationRunResponse, EvaluationResultsResponse, EvaluationRunRequest
 from app.services.evaluation_service import EvaluationService
 
 router = APIRouter()
@@ -19,11 +19,12 @@ router = APIRouter()
     response_model=EvaluationRunResponse,
     summary="Run Ragas evaluation benchmark",
 )
-async def run_evaluation(
+def run_evaluation(
+    request: EvaluationRunRequest,
     service: EvaluationService = Depends(get_evaluation_service),
 ) -> EvaluationRunResponse:
     try:
-        return await service.run_benchmark()
+        return service.run_benchmark(mode=request.mode)
     except EvaluationError as e:
         raise HTTPException(status_code=500, detail=e.detail)
 
@@ -33,7 +34,7 @@ async def run_evaluation(
     response_model=EvaluationResultsResponse,
     summary="Retrieve stored evaluation results",
 )
-async def get_results(
+def get_results(
     service: EvaluationService = Depends(get_evaluation_service),
 ) -> EvaluationResultsResponse:
-    return await service.get_results()
+    return service.get_results()
