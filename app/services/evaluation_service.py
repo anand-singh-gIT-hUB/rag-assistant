@@ -47,13 +47,19 @@ class EvaluationService:
             except Exception as e:
                 raise EvaluationError("Failed to read ground truth file", detail=str(e)) from e
 
-        if mode == "fast" or mode == "full":
-            pass # Keep all questions for both modes, fast mode only reduces metrics
+        if mode == "fast":
+            questions_data = [q for q in questions_data if q.get("fast")]
+        elif mode == "full":
+            pass
         else:
             raise EvaluationError("Invalid evaluation mode", detail=f"Unsupported mode: {mode}")
 
         try:
-            metrics, evaluated_count = self._run_ragas(questions_data, ground_truth_data, mode=mode)
+            metrics, evaluated_count = self._run_ragas(
+                questions_data,
+                ground_truth_data,
+                mode=mode,
+            )
         except Exception as e:
             logger.exception("Evaluation failed")
             raise EvaluationError("Ragas evaluation failed", detail=str(e)) from e
@@ -94,6 +100,21 @@ class EvaluationService:
         from langchain_community.embeddings import HuggingFaceEmbeddings
         from ragas.llms import LangchainLLMWrapper
         from ragas.embeddings import LangchainEmbeddingsWrapper
+
+        if mode == "fast":
+            metrics_to_run = [
+                faithfulness,
+                answer_relevancy,
+            ]
+        elif mode == "full":
+            metrics_to_run = [
+                faithfulness,
+                answer_relevancy,
+                context_recall,
+                context_precision,
+            ]
+        else:
+            raise EvaluationError("Invalid evaluation mode", detail=f"Unsupported mode: {mode}")
 
         # Local evaluator LLM using Ollama (use qwen2.5:1.5b for speed)
         evaluator_llm = LangchainLLMWrapper(
@@ -156,37 +177,14 @@ class EvaluationService:
             )
 
         logger.info(
-            "Prepared evaluation dataset",
+            "Running evaluation",
+            mode=mode,
             n_rows=len(rows),
             skipped=skipped,
-            sample_question=rows[0]["question"],
-            sample_has_answer=bool(rows[0]["answer"]),
-            sample_n_contexts=len(rows[0]["contexts"]),
+            metrics=[m.name for m in metrics_to_run],
         )
 
         dataset = Dataset.from_list(rows)
-
-        if mode == "fast":
-            metrics_to_run = [
-                faithfulness,
-                answer_relevancy,
-            ]
-        elif mode == "full":
-            metrics_to_run = [
-                faithfulness,
-                answer_relevancy,
-                context_recall,
-                context_precision,
-            ]
-        else:
-            raise EvaluationError("Invalid evaluation mode", detail=f"Unsupported mode: {mode}")
-
-        logger.info(
-            "Running evaluation",
-            mode=mode,
-            n_questions=len(questions),
-            metrics=[m.name for m in metrics_to_run],
-        )
 
         result = evaluate(
             dataset,

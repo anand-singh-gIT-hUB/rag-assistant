@@ -1,7 +1,7 @@
 {
-    "What is EcoTwin?": "EcoTwin is a comprehensive solution that leverages digital twin technology for system optimization.",
-    "What problem does EcoTwin solve?": "EcoTwin bridges the gap between physical operations and digital ecosystems, reducing inefficiencies and improving predictive maintenance.",
-    "What industries does EcoTwin target?": "EcoTwin primarily targets the manufacturing, supply chain, and infrastructure industrial sectors.",
-    "What is the EcoTwin business model?": "The business model centers around a B2B SaaS platform implementation integrated with localized manufacturing clusters.",
-    "What technologies power EcoTwin?": "EcoTwin is powered by core digital twin integrations paired with predictive AI and specialized industrial IoT (IIoT) sensors."
+    "What is EcoTwin?": "EcoTwin is a digital twin technology platform that bridges the physical and digital divide for process intelligence.",
+    "What problem does EcoTwin solve for MSMEs?": "EcoTwin solves the lack of affordable, rapid-deployment process diagnostics for MSMEs, eliminating prolonged integration times and high CapEx costs.",
+    "What industries does EcoTwin target?": "EcoTwin primarily targets precision manufacturing, metal casting, molding, discrete manufacturing, and smart infrastructure.",
+    "What is the EcoTwin business model?": "EcoTwin relies on subscription models (SaaS), hybrid edge-cloud licensing, and professional services consulting.",
+    "What technologies are used in the EcoTwin platform?": "The platform utilizes IoT sensors, edge computing frameworks, large language models for querying, and real-time dashboard analytics."
 }

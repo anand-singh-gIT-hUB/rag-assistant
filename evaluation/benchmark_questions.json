@@ -1,7 +1,22 @@
 [
-  {"question": "What is EcoTwin?", "fast": true},
-  {"question": "What problem does EcoTwin solve?", "fast": true},
-  {"question": "What industries does EcoTwin target?", "fast": false},
-  {"question": "What is the EcoTwin business model?", "fast": false},
-  {"question": "What technologies power EcoTwin?", "fast": false}
+    {
+        "question": "What is EcoTwin?",
+        "fast": true
+    },
+    {
+        "question": "What problem does EcoTwin solve for MSMEs?",
+        "fast": true
+    },
+    {
+        "question": "What industries does EcoTwin target?",
+        "fast": false
+    },
+    {
+        "question": "What is the EcoTwin business model?",
+        "fast": false
+    },
+    {
+        "question": "What technologies are used in the EcoTwin platform?",
+        "fast": false
+    }
 ]

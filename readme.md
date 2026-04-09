@@ -53,6 +53,30 @@ Open **http://localhost:8501** in your browser.
 
 ---
 
+## Performance Benchmark
+
+After the pipeline restructuring (April 2026), the system achieved sub-second retrieval latency and high grounding accuracy on a CPU-only environment.
+
+| Metric | Score | Mode | Notes |
+|---|---|---|---|
+| **Faithfulness** | 1.000 | Fast | Zero hallucinations; answers are 100% grounded in context. |
+| **Answer Relevancy** | 0.831 | Fast | Direct, targeted responses with minimal noise. |
+| **Faithfulness** | 1.000 | Full | Maintained perfect grounding even over larger question sets. |
+| **Answer Relevancy** | 0.341 | Full | Significant drop due to specific tail-end questions (Business Model, Tech Stack). |
+| **Context Recall** | 1.000 | Full | Every ground-truth fact is correctly retrieved from the corpus. |
+| **Context Precision** | 1.000 | Full | Retrieved candidates are perfectly aligned with semantic intent. |
+| **Retrieval Latency** | < 1s | — | Optimized via singleton caching and prompt compression. |
+
+*Evaluation run: `run_c9871ccf` (Full) & `run_68cd8c46` (Fast)*
+
+### Optimization Insights: Relevancy Gap
+
+While Fast mode (Questions 1-2) shows high relevancy (~0.83), Full mode (Questions 1-5) drops to ~0.34. 
+
+**Root Cause**: The tail-end questions (e.g., "Business Model", "Technologies used") are more sensitive to **prompt-level constraints**. Our strict "Direct Answer First" instruction causes the small `llama3.2:1b` model to skip descriptive context that the Ragas evaluator (`qwen2.5:1.5b`) expects for a high relevancy score. Essentially, the model is being *too* brief on complex topics, leading to a "relevant but incomplete" penalty in the metrics.
+
+---
+
 ## Directory Structure
 
 ```

@@ -32,7 +32,7 @@ mode = st.radio(
     options=["fast", "full"],
     format_func=lambda x: "Fast evaluation" if x == "fast" else "Full evaluation",
     help=(
-        "Fast mode runs all 5 questions with 2 metrics "
+        "Fast mode runs 2 questions with 2 metrics "
         "(faithfulness, answer_relevancy). "
         "Full mode runs all benchmark questions with 4 metrics "
         "(faithfulness, answer_relevancy, context_recall, context_precision)."
@@ -41,11 +41,11 @@ mode = st.radio(
 
 if mode == "fast":
     st.info(
-        "Fast mode: all 5 questions, 2 metrics.\n\n"
+        "Fast mode: 2 questions, 2 metrics.\n\n"
         "- Faithfulness\n"
         "- Answer relevancy"
     )
-    st.caption("Estimated runtime: ~1–2 minutes on local Ollama CPU inference.")
+    st.caption("Estimated runtime: ~2–5 minutes on local Ollama.")
 else:
     st.info(
         "Full mode: all questions, 4 metrics.\n\n"
@@ -54,7 +54,7 @@ else:
         "- Context recall\n"
         "- Context precision"
     )
-    st.caption("Estimated runtime: can be much longer depending on model and metrics (~5-10m).")
+    st.caption("Estimated runtime: can be much longer depending on model and metrics.")
 
 col1, col2 = st.columns([1, 3])
 with col1:
@@ -88,7 +88,6 @@ try:
             with st.expander(f"Run `{run['run_id']}` — {mode_label} — {run['started_at'][:10]}"):
                 st.write(f"**Mode:** {run.get('mode', 'N/A')}")
                 st.write(f"**Questions evaluated:** {run.get('num_questions', 0)}")
-                
                 m = run.get("metrics", {})
                 cols = st.columns(len(m))
                 for col, (metric, val) in zip(cols, m.items()):
