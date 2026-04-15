@@ -42,15 +42,39 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.warning("Embedder warmup failed (non-fatal)", error=str(e))
 
-    # 2. Warm LLM: loads Ollama model into memory
-    try:
-        await loop.run_in_executor(
-            None, svc._llm.complete,
-            "You are a helpful assistant.", "Reply with: ready"
-        )
-        logger.info("LLM warmup complete")
-    except Exception as e:
-        logger.warning("LLM warmup failed (non-fatal)", error=str(e))
+    # 2. Warm Reranker: loads Cross-Encoder weights into RAM (if enabled)
+    if settings.reranker_enabled:
+        try:
+            # We run a dummy retrieval + rerank to prime the model
+            await loop.run_in_executor(None, svc._pipeline.run, "warmup", 1, None, True)
+            logger.info("Reranker warmup complete")
+        except Exception as e:
+            logger.warning("Reranker warmup failed (non-fatal)", error=str(e))
+
+    # 3. Warm LLM: loads Ollama model into memory with retries (essential for Docker)
+    max_retries = 5
+    retry_delay = 5  # seconds
+    for attempt in range(1, max_retries + 1):
+        try:
+            logger.info(f"Ollama warmup attempt {attempt}/{max_retries}...")
+            await loop.run_in_executor(
+                None, svc._llm.complete,
+                "You are a helpful assistant.", "Reply with: ready"
+            )
+            logger.info("LLM warmup complete")
+            break
+        except Exception as e:
+            if attempt == max_retries:
+                logger.warning("LLM warmup failed after max retries (non-fatal)", error=str(e))
+            else:
+                logger.info(f"Ollama not ready yet, retrying in {retry_delay}s...")
+                await asyncio.sleep(retry_delay)
+
+    logger.info("──────────────────────────────────────────────────")
+    logger.info("🚀 RAG Assistant API is live!")
+    logger.info("   - Documentation: http://localhost:8000/docs")
+    logger.info("   - Health Status: http://localhost:8000/health")
+    logger.info("──────────────────────────────────────────────────")
 
     yield
     logger.info("RAG Assistant API shutting down")

@@ -6,7 +6,8 @@ Thin httpx-based client that wraps all FastAPI endpoints.
 import httpx
 from typing import Any
 
-BASE_URL = "http://127.0.0.1:8000"
+import os
+BASE_URL = os.getenv("RAG_API_BASE_URL", "http://127.0.0.1:8000").rstrip("/")
 TIMEOUT = 900.0
 
 

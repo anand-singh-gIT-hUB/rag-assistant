@@ -17,9 +17,12 @@ def render_sidebar():
             api_client.health_check()
             st.success("✓ API online", icon="🟢")
             st.session_state["api_online"] = True
+            st.markdown("[📖 API Documentation](http://localhost:8000/docs)")
+            st.markdown("[🏥 Health Status](http://localhost:8000/health)")
         except Exception:
             st.error("✗ API offline", icon="🔴")
             st.session_state["api_online"] = False
+            st.caption("Backend at `http://localhost:8000` is unreachable.")
 
         st.divider()
         st.markdown("### Navigation")
