@@ -9,17 +9,19 @@ Upload documents → they are parsed, chunked, embedded and stored in ChromaDB �
 ## Quick Start
 
 ### 1. Install dependencies
-
-```bash
-pip install -r requirements.txt
-```
+ 
+ ```bash
+ # For full local development (Backend + UI + Evaluation)
+ pip install -r requirements-dev.txt
+ ```
 
 ### 2. Configure environment
-
-```bash
-cp .env.example .env
-# Edit .env and set your OPENAI_API_KEY (or switch to EMBEDDING_PROVIDER=huggingface + LLM_PROVIDER=ollama)
-```
+ 
+ ```bash
+ cp .env.example .env
+ # Set APP_ENV=dev for local features.
+ # Set your OPENAI_API_KEY if using OpenAI providers.
+ ```
 
 ### 3. Start the API
 
@@ -37,75 +39,46 @@ Open **http://localhost:8501** in your browser.
 
 ---
 
-## Tech Stack
+## 🚀 Deployment & Environments
 
-| Layer | Default | Swap-In |
+The project supports two distinct modes to balance performance and features:
+
+| Feature | **Development** (`dev`) | **Production** (`prod`) |
 |---|---|---|
-| Backend API | FastAPI + Uvicorn | — |
-| Embeddings | OpenAI `text-embedding-3-small` | HuggingFace `all-MiniLM-L6-v2` |
-| Vector DB | ChromaDB | Qdrant (stub) |
-| LLM | OpenAI `gpt-4.1-mini` | Ollama |
-| Reranker | `cross-encoder/ms-marco-MiniLM-L-6-v2` | — |
-| Frontend | Streamlit multi-page | — |
-| Evaluation | Ragas | — |
-| Containers | Docker + docker-compose | — |
-| Tests | pytest | — |
+| **Target Context** | Local Laptop / Desktop | Railway / Cloud (CPU) |
+| **Evaluation (Ragas)** | ✅ Enabled | ❌ Disabled by default |
+| **Reranking** | ✅ Enabled | ❌ Disabled by default |
+| **Dependencies** | `requirements-dev.txt` | `requirements.txt` |
+| **PyTorch** | Standard | CPU-Optimized |
+
+### Railway Deployment (Backend)
+1. Connect your repo to Railway.
+2. Set environment variables: `APP_ENV=prod`, `OPENAI_API_KEY=...`.
+3. The `docker/Dockerfile.api` will handle the lightweight CPU-only build automatically using the production `requirements.txt`.
+
+### Local Evaluation
+To run Ragas benchmarks locally, ensure you have installed the evaluation extensions:
+```bash
+pip install -r requirements-eval.txt
+```
 
 ---
 
-## Performance Benchmark
-
-After the pipeline restructuring (April 2026), the system achieved sub-second retrieval latency and high grounding accuracy on a CPU-only environment.
-
-| Metric | Score | Mode | Notes |
-|---|---|---|---|
-| **Faithfulness** | 1.000 | Fast | Zero hallucinations; answers are 100% grounded in context. |
-| **Answer Relevancy** | 0.831 | Fast | Direct, targeted responses with minimal noise. |
-| **Faithfulness** | 1.000 | Full | Maintained perfect grounding even over larger question sets. |
-| **Answer Relevancy** | 0.341 | Full | Significant drop due to specific tail-end questions (Business Model, Tech Stack). |
-| **Context Recall** | 1.000 | Full | Every ground-truth fact is correctly retrieved from the corpus. |
-| **Context Precision** | 1.000 | Full | Retrieved candidates are perfectly aligned with semantic intent. |
-| **Retrieval Latency** | < 1s | — | Optimized via singleton caching and prompt compression. |
-
-*Evaluation run: `run_c9871ccf` (Full) & `run_68cd8c46` (Fast)*
-
-### Optimization Insights: Relevancy Gap
-
-While Fast mode (Questions 1-2) shows high relevancy (~0.83), Full mode (Questions 1-5) drops to ~0.34. 
-
-**Root Cause**: The tail-end questions (e.g., "Business Model", "Technologies used") are more sensitive to **prompt-level constraints**. Our strict "Direct Answer First" instruction causes the small `llama3.2:1b` model to skip descriptive context that the Ragas evaluator (`qwen2.5:1.5b`) expects for a high relevancy score. Essentially, the model is being *too* brief on complex topics, leading to a "relevant but incomplete" penalty in the metrics.
-
----
-
-## Directory Structure
+## 📂 Directory Structure
 
 ```
 rag-assistant/
 ├── app/
-│   ├── api/            # FastAPI app, routes, dependencies
-│   ├── core/           # Config, logging, constants, exceptions
-│   ├── ingestion/      # Loaders, parser, cleaner, pipeline
-│   ├── processing/     # Chunker, metadata, tokenizer
-│   ├── embeddings/     # OpenAI + HF embedders, factory
-│   ├── vectorstore/    # ChromaDB + Qdrant, factory
-│   ├── retrieval/      # Dense retriever, reranker, pipeline
-│   ├── llm/            # OpenAI + Ollama LLMs, prompts, factory
-│   ├── services/       # Document, Query, Citation, Evaluation services
-│   ├── schemas/        # Pydantic request/response models
-│   ├── storage/        # files/, vectordb/, logs/
-│   └── utils/          # file_utils, text_utils, id_utils
 ├── streamlit_app/
-│   ├── Home.py
-│   ├── pages/          # Chat, Documents, Settings, Evaluation
-│   ├── components/     # chat_box, uploader, sidebar, source_viewer
-│   └── utils/          # api_client, session
-├── evaluation/         # benchmark_questions.json, ground_truth.json
-├── tests/              # unit/ and integration/
-├── scripts/            # ingest_sample.py, run_evaluation.py
-├── docker/             # Dockerfile.api, Dockerfile.streamlit
+├── evaluation/
+├── tests/
+├── scripts/
+├── docker/
 ├── docker-compose.yml
 ├── Makefile
-└── requirements.txt
+├── requirements.txt       # Production core
+├── requirements-eval.txt  # Evaluation extensions
+└── requirements-dev.txt   # Full dev setup
 ```
 
 ---
@@ -121,7 +94,7 @@ rag-assistant/
 | POST | `/documents/{doc_id}/reindex` | Re-parse and re-embed |
 | POST | `/query` | Ask a question, get grounded answer |
 | POST | `/retrieve` | Debug: return raw chunks only |
-| POST | `/evaluate/run` | Run Ragas benchmark |
+| POST | `/evaluate/run` | Run Ragas benchmark (Dev only) |
 | GET | `/evaluate/results` | Get stored evaluation results |
 
 Interactive docs: **http://localhost:8000/docs**
@@ -134,62 +107,16 @@ All settings are read from environment variables (or `.env`):
 
 | Variable | Default | Description |
 |---|---|---|
+| `APP_ENV` | `dev` | `dev` or `prod` |
+| `ENABLE_EVALUATION` | `true` | Set `false` to skip eval deps |
 | `LLM_PROVIDER` | `openai` | `openai` or `ollama` |
-| `OPENAI_API_KEY` | — | Required for OpenAI provider |
-| `EMBEDDING_PROVIDER` | `openai` | `openai` or `huggingface` |
-| `VECTOR_STORE_PROVIDER` | `chroma` | `chroma` or `qdrant` |
 | `RERANKER_ENABLED` | `true` | Toggle cross-encoder reranking |
-| `CHUNK_SIZE` | `512` | Token budget per chunk |
-| `CHUNK_OVERLAP` | `64` | Token overlap between chunks |
-| `RETRIEVAL_TOP_K` | `20` | Candidates retrieved before reranking |
-| `RERANK_TOP_N` | `5` | Final chunks passed to LLM |
-
----
-
-## Running Tests
-
-```bash
-# Unit tests (no external services needed)
-pytest tests/unit/ -v
-
-# All tests
-pytest tests/ -v
-```
-
----
-
-## Docker
-
-```bash
-docker-compose up --build
-# API:  http://localhost:8000/docs
-# UI:   http://localhost:8501
-```
-
----
-
-## Switching to Open-Source Stack (No API Key)
-
-```env
-LLM_PROVIDER=ollama
-OLLAMA_MODEL=llama3
-EMBEDDING_PROVIDER=huggingface
-HF_EMBEDDING_MODEL=sentence-transformers/all-MiniLM-L6-v2
-```
-
-Then start Ollama locally:
-```bash
-ollama serve
-ollama pull llama3
-```
 
 ---
 
 ## Key Design Decisions
 
 1. **Provider abstraction via factory pattern** — swap providers by changing one env var.
-2. **Chunk metadata is first-class** — every chunk carries `doc_id`, `file_name`, `page_number`, `section_title`, enabling precise citations.
+2. **Chunk metadata is first-class** — every chunk carries `doc_id`, `file_name`, etc.
 3. **Retrieval is a pipeline** — embed → retrieve → filter → rerank → top-N.
-4. **LLM is strictly grounded** — system prompt forbids fabrication; model states ignorance when context is insufficient.
-5. **JSONL query log** — all queries appended to `app/storage/logs/queries.jsonl` for offline analysis.
-6. **Streamlit talks only to FastAPI** — all business logic in the backend.
+4. **Environment-aware scaling** — production builds skip heavy ML deps to ensure cloud stability.

@@ -29,6 +29,12 @@ class EvaluationService:
         self._results_path = settings.logs_path / EVAL_RESULTS_FILE
 
     def run_benchmark(self, mode: str = "fast") -> EvaluationRunResponse:
+        if not self._settings.enable_evaluation:
+            raise EvaluationError(
+                "Evaluation is disabled in this environment.",
+                detail="Install evaluation dependencies (requirements-eval.txt) and set ENABLE_EVALUATION=True to enable."
+            )
+
         started_at = datetime.now(timezone.utc)
         run_id = f"run_{uuid.uuid4().hex[:8]}"
 

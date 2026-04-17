@@ -1,0 +1,4 @@
+# ── Evaluation Benchmarking (Local only) ───────────────────────────────────────
+ragas==0.1.9
+datasets==2.19.1
+langchain-community==0.2.0

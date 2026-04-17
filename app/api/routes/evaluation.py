@@ -30,7 +30,8 @@ def run_evaluation(
     try:
         return service.run_benchmark(mode=request.mode)
     except EvaluationError as e:
-        raise HTTPException(status_code=500, detail=e.detail)
+        status_code = 501 if "disabled" in str(e).lower() else 500
+        raise HTTPException(status_code=status_code, detail=e.detail)
 
 
 @router.get(

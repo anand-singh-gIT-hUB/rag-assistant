@@ -4,11 +4,12 @@ app/core/config.py
 Centralised settings loaded from environment variables / .env file.
 All other modules import `get_settings()` — never os.getenv() directly.
 """
+import os
 from functools import lru_cache
 from pathlib import Path
 from typing import Literal
 
-from pydantic import Field, field_validator
+from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -18,9 +19,12 @@ class Settings(BaseSettings):
         env_file_encoding="utf-8",
         case_sensitive=False,
         extra="ignore",
-        frozen=True,
     )
 
+    # ── Environment ────────────────────────────────────────────────────────────
+    app_env: Literal["dev", "prod"] = "dev"
+    enable_evaluation: bool = True  # Defaulted in constructor
+ 
     # ── LLM ──────────────────────────────────────────────────────────────────
     llm_provider: Literal["openai", "ollama"] = "openai"
     openai_api_key: str = Field(default="", repr=False)
@@ -44,7 +48,7 @@ class Settings(BaseSettings):
     retrieval_top_k: int = 20
     rerank_top_n: int = 5
     reranker_model: str = "cross-encoder/ms-marco-MiniLM-L-6-v2"
-    reranker_enabled: bool = True
+    reranker_enabled: bool = True  # Defaulted in constructor
 
     # ── Chunking ──────────────────────────────────────────────────────────────
     chunk_size: int = 512
@@ -94,4 +98,12 @@ class Settings(BaseSettings):
 @lru_cache(maxsize=1)
 def get_settings() -> Settings:
     """Return the cached Settings singleton."""
-    return Settings()
+    s = Settings()
+    # Apply environment-aware defaults if not explicitly set in .env/environment
+    # We do this manually here because Pydantic v2's default-setting-based-on-other-fields
+    # is cleanest via model_validator or post-init logic.
+    if "RERANKER_ENABLED" not in os.environ and s.app_env == "prod":
+        object.__setattr__(s, "reranker_enabled", False)
+    if "ENABLE_EVALUATION" not in os.environ and s.app_env == "prod":
+        object.__setattr__(s, "enable_evaluation", False)
+    return s
