@@ -95,7 +95,6 @@ class Settings(BaseSettings):
         return v.upper()
 
 
-@lru_cache(maxsize=1)
 def get_settings() -> Settings:
     """Return the cached Settings singleton."""
     s = Settings()
