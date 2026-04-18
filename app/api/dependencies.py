@@ -22,8 +22,8 @@ from app.services.evaluation_service import EvaluationService
 def get_document_service(
     settings: Settings = Depends(get_settings),
 ) -> DocumentService:
-    embedder = get_embedder(settings)
-    store = get_vector_store(settings)
+    embedder = get_embedder()
+    store = get_vector_store()
     return DocumentService(embedder=embedder, vector_store=store, settings=settings)
 
 
@@ -31,9 +31,9 @@ def get_document_service(
 def _build_query_service() -> QueryService:
     """Build the canonical, long-lived QueryService singleton."""
     settings = get_settings()
-    embedder = get_embedder(settings)
-    store = get_vector_store(settings)
-    llm = get_llm(settings)
+    embedder = get_embedder()
+    store = get_vector_store()
+    llm = get_llm()
     pipeline = RetrievalPipeline(embedder=embedder, vector_store=store, settings=settings)
     return QueryService(retrieval_pipeline=pipeline, llm=llm, settings=settings)
 

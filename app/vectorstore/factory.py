@@ -3,12 +3,15 @@ app/vectorstore/factory.py
 """
 from functools import lru_cache
 
-from app.core.config import Settings
+from typing import Optional
+
+from app.core.config import Settings, get_settings
 from app.vectorstore.base import VectorStoreBase
 
 
 @lru_cache(maxsize=1)
-def get_vector_store(settings: Settings) -> VectorStoreBase:
+def _get_vector_store() -> VectorStoreBase:
+    settings = get_settings()
     if settings.vector_store_provider == "chroma":
         from app.vectorstore.chroma_store import ChromaStore
         return ChromaStore(
@@ -23,3 +26,8 @@ def get_vector_store(settings: Settings) -> VectorStoreBase:
         )
     else:
         raise ValueError(f"Unknown vector store provider: {settings.vector_store_provider}")
+
+
+def get_vector_store(settings: Optional[Settings] = None) -> VectorStoreBase:
+    """Public wrapper to get the cached vector store."""
+    return _get_vector_store()
