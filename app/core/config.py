@@ -26,15 +26,12 @@ class Settings(BaseSettings):
     enable_evaluation: bool = True  # Defaulted in constructor
  
     # ── LLM ──────────────────────────────────────────────────────────────────
-    llm_provider: Literal["openai", "ollama"] = "openai"
-    openai_api_key: str = Field(default="", repr=False)
-    openai_llm_model: str = "gpt-4.1-mini"
+    llm_provider: Literal["ollama"] = "ollama"
     ollama_base_url: str = "http://localhost:11434"
     ollama_model: str = "llama3"
 
     # ── Embeddings ───────────────────────────────────────────────────────────
-    embedding_provider: Literal["openai", "huggingface"] = "openai"
-    openai_embedding_model: str = "text-embedding-3-small"
+    embedding_provider: Literal["huggingface"] = "huggingface"
     hf_embedding_model: str = "sentence-transformers/all-MiniLM-L6-v2"
 
     # ── Vector Store ─────────────────────────────────────────────────────────
@@ -49,6 +46,9 @@ class Settings(BaseSettings):
     rerank_top_n: int = 5
     reranker_model: str = "cross-encoder/ms-marco-MiniLM-L-6-v2"
     reranker_enabled: bool = True  # Defaulted in constructor
+    # ── Hybrid Retrieval (BM25 + Dense) ──────────────────────────────────────
+    hybrid_enabled: bool = True    # Toggle BM25 + dense fusion
+    bm25_top_k: int = 20           # BM25 candidate pool size before RRF
 
     # ── Chunking ──────────────────────────────────────────────────────────────
     chunk_size: int = 512

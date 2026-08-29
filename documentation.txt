@@ -1,0 +1,163 @@
+================================================================================
+RAG KNOWLEDGE ASSISTANT - COMPREHENSIVE PROJECT DOCUMENTATION & EVOLUTION
+================================================================================
+
+1. PROJECT OVERVIEW & ARCHITECTURE
+--------------------------------------------------------------------------------
+The RAG Knowledge Assistant is a production-grade, modular Retrieval-Augmented 
+Generation (RAG) system built with Python, FastAPI, ChromaDB, HuggingFace/SentenceTransformers, 
+Ollama, Cross-Encoders, BM25, and Streamlit.
+
+Core Architecture:
+- Document Ingestion: Upload PDF, DOCX, TXT, Markdown -> Text extraction -> Token-aware chunking -> Embedding -> ChromaDB storage & metadata indexing.
+- Retrieval Pipeline: Hybrid Retrieval (Dense Vector Search + Sparse BM25 Search) fused via Reciprocal Rank Fusion (RRF) -> Cross-Encoder Reranking (optional) -> Context Window Assembly.
+- Generation & Streaming: Local LLM completion via Ollama (e.g. llama3 / llama3.2:1b) using streaming response (NDJSON tokens) with citation mapping.
+- Evaluation Framework: Ragas benchmarking framework (Faithfulness, Answer Relevancy, Context Recall, Context Precision).
+- User Interface: Multi-page Streamlit Dashboard (Home, Chat, Documents, Settings, Evaluation).
+
+
+2. DETAILED DIRECTORY & FILE GUIDE
+--------------------------------------------------------------------------------
+rag-assistant/
+├── app/                              # Core Backend Application
+│   ├── api/                          # FastAPI REST API layer
+│   │   ├── routes/
+│   │   │   ├── documents.py          # Upload, list, delete, reindex endpoints + BM25 invalidation hooks
+│   │   │   ├── evaluation.py         # Benchmark execution & evaluation results history endpoints
+│   │   │   ├── health.py             # Health check endpoint (/health)
+│   │   │   └── query.py              # Single-turn query & NDJSON streaming endpoints
+│   │   ├── dependencies.py           # Dependency injection helpers & singleton management
+│   │   └── main.py                   # FastAPI initialization, lifespan warmup, CORS, exception handlers
+│   ├── core/                         # Core infrastructure & configuration
+│   │   ├── config.py                 # Pydantic BaseSettings loading from .env / environment variables
+│   │   ├── constants.py              # Global constants (max query len, log paths, etc.)
+│   │   ├── exceptions.py             # Custom RAG exception hierarchy (EmbeddingError, VectorStoreError, etc.)
+│   │   └── logging.py                # Structured logging configuration using structlog
+│   ├── embeddings/                   # Embedding abstraction layer
+│   │   ├── base.py                   # EmbedderBase abstract class
+│   │   ├── factory.py                # Embedder factory (cached singleton returning HuggingFaceEmbedder)
+│   │   └── hf_embedder.py            # Local HuggingFace SentenceTransformer embedder implementation
+│   ├── ingestion/                    # Ingestion pipeline layer
+│   │   ├── chunker.py                # Token-aware text chunking with overlap
+│   │   ├── loader.py                 # Document loader supporting PDF, DOCX, TXT, Markdown
+│   │   └── pipeline.py               # Ingestion orchestrator (loader -> chunker -> embed -> vectorstore)
+│   ├── llm/                          # LLM abstraction layer
+│   │   ├── base.py                   # LLMBase abstract class (complete, stream_complete, model_name)
+│   │   ├── factory.py                # LLM factory (cached singleton returning OllamaLLM)
+│   │   ├── ollama_llm.py             # Local Ollama client implementation with completion & token streaming
+│   │   └── prompts.py                # Grounded System & User prompt templates with citation format
+│   ├── processing/                   # Text processing utilities
+│   │   ├── metadata.py               # ChunkMetadata model & ChromaDB metadata conversions
+│   │   └── tokenizer.py              # Token counter & truncator using tiktoken
+│   ├── retrieval/                    # Retrieval & reranking pipeline
+│   │   ├── bm25_retriever.py         # In-memory BM25Okapi sparse retriever with lazy corpus index building
+│   │   ├── filters.py                # ChromaDB metadata filter builders (doc_id filtering)
+│   │   ├── fusion.py                 # Reciprocal Rank Fusion (RRF, k=60) implementation
+│   │   ├── pipeline.py               # Main retrieval pipeline orchestrator (Dense + Sparse -> RRF -> Rerank)
+│   │   ├── reranker.py               # Cross-encoder reranker (ms-marco-MiniLM-L-6-v2)
+│   │   └── retriever.py              # Dense vector search retriever
+│   ├── schemas/                      # Pydantic request & response schemas
+│   │   ├── document.py               # Document management schemas
+│   │   ├── evaluation.py             # Ragas evaluation schemas
+│   │   └── query.py                  # Query request/response & streaming event schemas
+│   ├── services/                     # Business logic services
+│   │   ├── citation_service.py       # Extract & format citations from retrieved chunks
+│   │   ├── document_service.py       # Disk file & vectorstore persistence management
+│   │   ├── evaluation_service.py     # Ragas benchmark execution & file logging
+│   │   └── query_service.py          # Orchestrates retrieval + LLM generation + query logging
+│   ├── storage/                      # Local persistent storage directory (files, vectordb, logs)
+│   ├── utils/                        # System & helper utilities
+│   │   ├── file_utils.py             # File saving, validation, safe deletion
+│   │   └── id_utils.py               # Unique ID generation utilities
+│   └── vectorstore/                  # Vector database abstraction layer
+│       ├── base.py                   # VectorStoreBase abstract class
+│       ├── chroma_store.py           # ChromaDB vector store implementation
+│       ├── factory.py                # Vector store factory (cached singleton)
+│       └── qdrant_store.py           # Qdrant client implementation
+├── docker/                           # Container definitions
+│   ├── Dockerfile.api                # FastAPI container definition
+│   └── Dockerfile.streamlit          # Streamlit container definition
+├── docker-compose.yml                # Docker orchestrator for API + Streamlit
+├── evaluation/                       # Evaluation assets (benchmark_questions.json, ground_truth.json)
+├── streamlit_app/                    # Frontend Streamlit Dashboard
+│   ├── Home.py                       # Landing page with system overview
+│   ├── pages/                        # Multi-page views (1_Chat.py, 2_Documents.py, 3_Settings.py, 4_Evaluation.py)
+│   ├── components/                   # Reusable UI components (sidebar, etc.)
+│   └── utils/                        # Frontend API client and session management
+├── requirements.txt                  # Core production dependencies
+├── requirements-dev.txt              # Local development dependencies
+├── requirements-eval.txt             # Ragas evaluation dependencies
+└── readme.md                         # Project summary & quickstart
+
+
+3. KEY RAG PROCESSES & IMPLEMENTATION DETAILS
+--------------------------------------------------------------------------------
+
+A. Document Ingestion Pipeline:
+   1. Document Loader: `app/ingestion/loader.py` reads PDFs via PyMuPDF (fitz), DOCX via python-docx, and plain text/Markdown files.
+   2. Chunker: `app/ingestion/chunker.py` uses tiktoken (`cl100k_base`) to split text into uniform token sizes (default 512 tokens with 64 overlap).
+   3. Embedding: `app/embeddings/hf_embedder.py` computes 384-dimensional dense vectors using `sentence-transformers/all-MiniLM-L6-v2`.
+   4. Storage: Chunks, vectors, and rich metadata (doc_id, file_name, page_number, uploaded_at) are upserted to ChromaDB (`app/vectorstore/chroma_store.py`).
+
+B. Hybrid Retrieval & RRF Fusion:
+   1. Dense Retrieval (`app/retrieval/retriever.py`): Queries ChromaDB for top-K nearest neighbors using cosine similarity.
+   2. Sparse Retrieval (`app/retrieval/bm25_retriever.py`): Builds an in-memory `BM25Okapi` index from the document corpus to match exact keywords and rare terminology.
+   3. Reciprocal Rank Fusion (`app/retrieval/fusion.py`): Merges dense and sparse result lists using the RRF formula:
+      Score(d) = sum( 1 / (60 + rank(d)) )
+      This balances semantic understanding with keyword precision without requiring score scale normalization.
+   4. Index Invalidation: `BM25Retriever.invalidate()` is triggered on document upload, deletion, or reindexing to keep the sparse index synchronized.
+
+C. Reranking Pipeline:
+   - `app/retrieval/reranker.py` uses a Cross-Encoder model (`cross-encoder/ms-marco-MiniLM-L-6-v2`).
+   - It evaluates (query, chunk_text) pairs simultaneously to re-score candidate passages, sharpening precision before context is fed to the LLM.
+
+D. Generation & Citation:
+   - `app/services/query_service.py` injects top context passages into grounded system/user prompts (`app/llm/prompts.py`).
+   - `OllamaLLM` (`app/llm/ollama_llm.py`) streams NDJSON tokens back to the user via FastAPI `StreamingResponse`.
+   - `citation_service.py` extracts document sources and maps precise line/section citations.
+
+
+4. CHRONOLOGICAL EVOLUTION & MAJOR ISSUES SOLVED
+--------------------------------------------------------------------------------
+
+Phase 1: Initial Modular Architecture & Open-Source Migration
+- Task: Transitioned from OpenAI API to a fully local open-source stack using Ollama (`llama3.2:1b`) and HuggingFace SentenceTransformers.
+- Architecture: Built factory abstractions (`get_llm()`, `get_embedder()`, `get_vector_store()`) to decouple components.
+
+Phase 2: Ragas Benchmark Evaluation & Optimization
+- Issue: Evaluated RAG performance using Ragas (Faithfulness, Answer Relevancy, Context Recall, Context Precision). Observed lower answer relevancy scores (~0.34) in Full mode compared to Fast mode (~0.83).
+- Insight & Solution: Small local LLMs (`llama3.2:1b`) over-adhered to strict conciseness instructions in system prompts. Adjusted context normalization and prompt constraints to allow sufficient explanatory detail.
+
+Phase 3: Startup Warmup & Latency Optimization
+- Issue: First queries experienced a 15+ second delay due to lazy model loading (Embedder, Reranker, Ollama) on cold startup.
+- Solution: Implemented FastAPI `lifespan` handler in `app/api/main.py` to eagerly warm up Embedder weights, Reranker cross-encoder, and execute a dummy LLM completion upon API boot.
+
+Phase 4: Dockerization & Container Hardening
+- Issues Faced:
+  1. Unbuffered logs prevented real-time monitoring inside Docker containers.
+  2. Health checks failed during startup due to slow CPU-based model loading.
+  3. Streamlit reported internal container addresses (`0.0.0.0`) instead of browser-accessible localhost addresses.
+- Solutions:
+  1. Added `ENV PYTHONUNBUFFERED=1` to Dockerfile.api and Dockerfile.streamlit.
+  2. Configured container health check `start_period: 120s` in `docker-compose.yml`.
+  3. Added Ollama retry loop with exponential backoff during lifespan startup.
+  4. Explicitly logged clickable browser access URLs (`http://localhost:8000/docs`, `http://localhost:8501`) in backend logs and Streamlit UI.
+
+Phase 5: Railway Deployment Hardening & Cache Fixes
+- Issue 1: Backend crashed on startup with `TypeError: unhashable type: 'Settings'`.
+  - Cause: `@lru_cache` was decorating functions accepting Pydantic `Settings` objects as parameters, which are unhashable in Pydantic v2.
+  - Solution: Refactored factories (`get_embedder()`, `get_llm()`, `get_vector_store()`, `_build_query_service()`) to be zero-argument functions decorating with `@lru_cache(maxsize=1)` and retrieving settings internally via `get_settings()`.
+- Issue 2: Crash on Railway with `AttributeError: np.float_ was removed in NumPy 2.0`.
+  - Cause: ChromaDB version was incompatible with NumPy 2.x releases.
+  - Solution: Pinned `numpy==1.26.4` and `chromadb==0.4.24` in `requirements.txt`.
+
+Phase 6: Total Removal of OpenAI Dependencies
+- Task: Completely purged all OpenAI code (`openai_llm.py`, `openai_embedder.py`, `openai` package) to establish a 100% open-source local stack without any external API key requirements or dead code paths.
+
+Phase 7: Implementation of Hybrid Retrieval (Dense + BM25 + RRF)
+- Task: Enhanced retrieval accuracy by implementing hybrid search.
+- Details: Added `rank-bm25` dependency, created `BM25Retriever` with lazy corpus indexing, built `reciprocal_rank_fusion` for rank merging, and added automatic BM25 index invalidation on document mutations.
+
+================================================================================
+END OF DOCUMENTATION
+================================================================================

@@ -37,3 +37,8 @@ class VectorStoreBase(ABC):
     @abstractmethod
     def count(self) -> int:
         ...
+
+    @abstractmethod
+    def get_all_chunks(self) -> list[dict[str, Any]]:
+        """Return all stored chunks as dicts with keys: chunk_id, text, metadata."""
+        ...

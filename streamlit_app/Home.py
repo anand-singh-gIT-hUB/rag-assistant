@@ -31,7 +31,7 @@ st.markdown(
         </h1>
         <p style="font-size:1.2rem; color:#888; max-width:600px; margin:auto;">
             Upload your documents. Ask anything. Get grounded, cited answers — powered
-            by OpenAI or a fully local open-source stack.
+            by a fully local, open-source AI stack.
         </p>
     </div>
     """,

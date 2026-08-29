@@ -56,3 +56,5 @@ evaluation/reports/
 # Misc
 *.log
 *.tmp
+
+temp_key_test.ps1

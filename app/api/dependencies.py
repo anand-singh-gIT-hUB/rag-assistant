@@ -46,3 +46,8 @@ def get_evaluation_service() -> EvaluationService:
     settings = get_settings()
     query_service = _build_query_service()
     return EvaluationService(settings=settings, query_service=query_service)
+
+
+def get_retrieval_pipeline() -> RetrievalPipeline:
+    """Expose the singleton pipeline for BM25 index invalidation hooks."""
+    return _build_query_service()._pipeline

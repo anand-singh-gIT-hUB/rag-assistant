@@ -91,3 +91,22 @@ class ChromaStore(VectorStoreBase):
 
     def count(self) -> int:
         return self._col.count()
+
+    def get_all_chunks(self) -> list[dict]:
+        """Return all stored chunks for BM25 index building."""
+        try:
+            result = self._col.get(include=["documents", "metadatas"])
+            chunks = []
+            for chunk_id, text, metadata in zip(
+                result["ids"], result["documents"], result["metadatas"]
+            ):
+                chunks.append(
+                    {
+                        "chunk_id": chunk_id,
+                        "text": text or "",
+                        "metadata": metadata or {},
+                    }
+                )
+            return chunks
+        except Exception as e:
+            raise VectorStoreError(f"ChromaDB get_all_chunks failed: {e}") from e
